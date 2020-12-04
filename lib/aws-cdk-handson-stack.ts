@@ -1,5 +1,5 @@
 import * as cdk from '@aws-cdk/core';
-import {LogGroup, RetentionDays} from '@aws-cdk/aws-logs';
+import {CfnSubscriptionFilter, LogGroup, RetentionDays} from '@aws-cdk/aws-logs';
 import {BlockPublicAccess, Bucket} from '@aws-cdk/aws-s3';
 import {Duration} from '@aws-cdk/core';
 import {
@@ -179,5 +179,28 @@ export class AwsCdkHandsonStack extends cdk.Stack {
         },
       }
     );
+
+    const roleCloudWatchLogSubscribe = new Role(
+      this,
+      'roleCloudWatchLogSubscribe',
+      {
+        assumedBy: new ServicePrincipal('logs.amazonaws.com'),
+        roleName: 'roleCloudWatchLogSubscribe',
+      }
+    );
+    roleCloudWatchLogSubscribe.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['firehose:*'],
+        resources: ['arn:aws:firehose:*'],
+      })
+    );
+
+    new CfnSubscriptionFilter(this, 'subscriptionFilter', {
+      destinationArn: streamKinesisFirehose.attrArn,
+      filterPattern: '',
+      logGroupName: logGroup.logGroupName,
+      roleArn: roleCloudWatchLogSubscribe.roleArn,
+    });
   }
 }
